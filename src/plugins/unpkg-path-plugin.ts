@@ -1,3 +1,4 @@
+//First call for index.js,then there will be a module being imported in the index.js,that module is imported with unpkg,if there are helper-modules being imported in that module,then that will be also imported.
 import axios from 'axios';
 import * as esbuild from 'esbuild-wasm';
  
@@ -13,10 +14,12 @@ export const unpkgPathPlugin = () => {
         if(args.path == 'index.js'){
             return { path: args.path, namespace: 'a' };
         }
-        // else if(args.path == 'tiny-test-pkg'){
-        //     return {path:'unpkg.com/tiny-test-pkg@1.0.0/index.js',
-        //     namespace:'a'}
-        // }
+        if(args.path.includes("./")||args.path.includes("../")){
+         return{
+          namespace:'a',
+          path:new URL(args.path,'https://unpkg.com' + args.resolveDir +'/').href
+         } 
+        }
         return{
             namespace:'a',
             path:`https://unpkg.com/${args.path}`
@@ -30,17 +33,20 @@ export const unpkgPathPlugin = () => {
           return {
             loader: 'jsx',
             contents: `
-              const message = require('medium-test-pkg');
-              console.log(message);
+              import React from 'react';
+              console.log(react,reactDOM);
             `,
           };
         }
         console.log(args.path);
-        const {data} = await axios.get('https://unpkg.com/tiny-test-pkg@1.0.0/index.js');
+        const {data,request} = await axios.get(args.path);
+        console.log(request);
+        
         //returning final content to ESBuild.
         return {
             loader:'jsx',
-            contents:data
+            contents:data,
+            resolveDir:new URL("./",request.responseURL).pathname
         }
       });
     },
